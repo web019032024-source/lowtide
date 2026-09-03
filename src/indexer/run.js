@@ -5,6 +5,7 @@ import { db } from "./db.js";
 import { explorer } from "../adapter/blockscout.js";
 import { detectSource } from "../adapter/launchpad.js";
 import { scoreDeployer } from "../scoring/deployer.js";
+import { syncSwaps } from "./swaps.js";
 
 const POLL = +(process.env.POLL_MS || 15000);
 const addrOf = (o) => (o?.address_hash || o?.address?.hash || (typeof o?.address === "string" ? o.address : null) || o?.contract_address_hash || o?.hash || "").toLowerCase();
@@ -32,7 +33,7 @@ async function snapshotHolders(addr, deployer) {
   const hs = await explorer.holders(addr, 25);
   const total = hs.reduce((a, h) => a + Number(h.value || 0), 0) || 1;
   const clusters = new Map();
-  for (const h of hs) {
+  for (const h of hs.slice(0, 10)) {
     const w = addrOf(h);
     if (!w) continue;
     let funded = null, cluster = null;
@@ -55,6 +56,14 @@ async function snapshotHolders(addr, deployer) {
   }
 }
 
+async function syncRecentSwaps() {
+  const rows = (await db.query(`select address from tokens where alive order by coalesce(swaps_synced_at, to_timestamp(0)) asc limit 6`)).rows;
+  for (const r of rows) {
+    try { const n = await syncSwaps(db, r.address); if (n) console.log("swaps", r.address, "+" + n); }
+    catch (e) { console.error("swaps:", r.address, e.message); }
+  }
+}
+
 async function markDeaths() {
   await db.query(`update tokens set alive=false, died_at=now(), death_cause='no_trades_48h'
     where alive and created_at < now()-interval '48 hours'
@@ -66,7 +75,7 @@ async function markDeaths() {
 }
 
 async function loop() {
-  try { await ingestNew(); await markDeaths(); } catch (e) { console.error("indexer:", e.message); }
+  try { await ingestNew(); await syncRecentSwaps(); await markDeaths(); } catch (e) { console.error("indexer:", e.message); }
   setTimeout(loop, POLL);
 }
 console.log("indexer up, polling every", POLL, "ms");

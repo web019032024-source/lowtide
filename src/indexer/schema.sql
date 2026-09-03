@@ -33,3 +33,12 @@ create index if not exists swaps_token_ts on swaps(token, ts);
 
 create table if not exists fingerprints (fp text primary key, platform text, note text);
 create table if not exists watches (id serial primary key, token text, wallet text, kind text, created_at timestamptz default now());
+
+-- swap indexing state (added in v0.2)
+alter table tokens add column if not exists pool text;
+alter table tokens add column if not exists pool_kind text;      -- v2 | v3
+alter table tokens add column if not exists quote_token text;
+alter table tokens add column if not exists quote_symbol text;
+alter table tokens add column if not exists swap_cursor bigint default 0;  -- last block scanned
+alter table tokens add column if not exists swaps_synced_at timestamptz;
+alter table swaps add column if not exists block bigint;

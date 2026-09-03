@@ -3,6 +3,7 @@ import { explorer } from "../adapter/blockscout.js";
 import { detectSource } from "../adapter/launchpad.js";
 import { analyze } from "../scoring/analyze.js";
 import { toCandles, sniperShare } from "../scoring/normalize.js";
+import { syncSwaps } from "../indexer/swaps.js";
 
 const addrOf = (o) => (o?.address_hash || o?.address?.hash || (typeof o?.address === "string" ? o.address : null) || o?.contract_address_hash || o?.hash || "").toLowerCase();
 
@@ -32,8 +33,17 @@ export async function tokenReport(addr, db) {
     const total = holdersRaw.reduce((a, h) => a + Number(h.value || 0), 0) || 1;
     holders = holdersRaw.map(h => ({ wallet: addrOf(h), pct: Number(h.value || 0) / total * 100, first_block: false, cluster: null })).filter(h => h.wallet);
   }
+  if (db) {
+    const known = await db.query("select 1 from tokens where address=$1", [addr]);
+    if (!known.rowCount) await db.query(`insert into tokens(address,name,symbol,decimals,total_supply,deployer,creation_tx,created_at,source,verified,mintable,fp,last_seen)
+      values($1,$2,$3,$4,$5,$6,$7,now(),$8,$9,$10,$11,now()) on conflict do nothing`,
+      [addr, info.name || null, info.symbol || null, +info.decimals || 18, info.total_supply || null, src.creator || null, src.creationTx || null, src.source, src.verified ?? null, !!src.mintable, src.fp || null]);
+    const have = await db.query("select count(*) c from swaps where token=$1", [addr]);
+    if (+have.rows[0].c < 4) { try { await syncSwaps(db, addr); } catch (e) { console.error("on-demand swaps:", e.message); } }
+  }
+  const supplyUnits = Number(info.total_supply || 0) / 10 ** (+info.decimals || 18);
   let swaps = db ? (await db.query("select extract(epoch from ts)*1000 ts, side, usd, price_usd, wallet from swaps where token=$1 order by ts", [addr])).rows
-    .map(r => ({ ...r, ts: +r.ts, usd: +r.usd, price_usd: +r.price_usd })) : [];
+    .map(r => ({ ...r, ts: +r.ts, usd: +r.usd, price_usd: +r.price_usd * (supplyUnits || 1) })) : []; // price expressed as market cap for the UI
   const early = new Set(holders.filter(h => h.first_block).map(h => h.wallet));
   swaps = swaps.map(s => ({ ...s, early: early.has(s.wallet) }));
   const candles = toCandles(swaps);

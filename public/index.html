@@ -501,7 +501,7 @@ function fromReport(j){
 }
 $("#go").onclick=async()=>{const v=$("#addr").value.trim();if(!/^0x[0-9a-fA-F]{40}$/.test(v)){toast("Enter a full 0x contract address");return;}
   toast("Looking up on Robinhood Chain…");
-  try{const j=await fetchToken(v); demoEl.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",false)); render(fromReport(j)); if(j.note) toast(j.note);}
+  try{const j=await fetchToken(v); demoEl.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",false)); render(fromReport(j)); $(".demo-note").innerHTML=`<b style="color:var(--teal)">Live</b> · ${j.token.name} on Robinhood Chain · launch: ${j.launch.evidence}`; if(j.note) toast(j.note);}
   catch(e){toast(e.message+" — showing demo data");demoEl.querySelectorAll("button")[parseInt(v.slice(2,8),16)%DEMOS.length].click();}};
 render(makeDemo(DEMOS[0]));
 </script>

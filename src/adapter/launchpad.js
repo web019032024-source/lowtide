@@ -24,7 +24,18 @@ export async function detectSource(addr, db) {
   fp = fingerprint(code?.deployed_bytecode);
 
   if (known) { source = known; evidence = `created by ${known} factory`; }
-  else if (db) {
+  else if (creator) {
+    // heuristic: the creator is a contract whose verified name mentions a launchpad
+    try {
+      const c = await explorer.address(creator);
+      const nm = `${c?.name || ""} ${c?.implementation_name || ""} ${c?.implementations?.map(i => i.name).join(" ") || ""}`.toLowerCase();
+      if (/pons/.test(nm)) { source = "pons_v2"; evidence = `creator contract "${c.name}"`; }
+      else if (/hood\.?fun|hoodfun/.test(nm)) { source = "hoodfun"; evidence = `creator contract "${c.name}"`; }
+      else if (/pools\.?trade/.test(nm)) { source = "pools_trade"; evidence = `creator contract "${c.name}"`; }
+      else if (c?.is_contract) evidence = `created by contract "${c.name || creator}" (unknown launchpad)`;
+    } catch {}
+  }
+  if (source === "direct" && db) {
     const row = await db.query("select platform from fingerprints where fp=$1", [fp]);
     if (row.rows[0]) { source = row.rows[0].platform; evidence = `bytecode fingerprint ${fp}`; }
   }

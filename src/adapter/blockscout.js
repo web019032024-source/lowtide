@@ -55,6 +55,14 @@ export const explorer = {
     for await (const t of paginate(`/tokens`, { type: "ERC-20" }, maxPages)) out.push(t);
     return out;
   },
+  async logs(addr, maxPages = 3) {
+    const out = [];
+    for await (const l of paginate(`/addresses/${addr}/logs`, {}, maxPages)) out.push(l);
+    return out;
+  },
+  tokenBalances: (addr) => fetchJson(`/addresses/${addr}/token-balances`),
+  stats: () => fetchJson(`/stats`),
+  tx: (hash) => fetchJson(`/transactions/${hash}`),
   async search(q) {
     const d = await fetchJson(`/search`, { q });
     return (d?.items || []).filter(i => i.type === "token");
