@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lowtide — lower-risk entries on Robinhood Chain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root{
+  --ink:#0B1020;--ink-2:#121A30;--ink-3:#1A2440;--line:#26324F;--line-2:#34426A;
+  --text:#EAEEF8;--mute:#8F9AB6;--amber:#F5B63A;--amber-soft:rgba(245,182,58,.14);
+  --coral:#FF6E6E;--coral-soft:rgba(255,110,110,.14);--teal:#41D6B8;--teal-soft:rgba(65,214,184,.14);
+  --sky:#82B4FF;--sky-soft:rgba(130,180,255,.14);--r:16px;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;--body:"IBM Plex Sans",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--ink);color:var(--text);font-family:var(--body);-webkit-font-smoothing:antialiased}
+body{min-height:100vh}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:6px}
+
+/* hero with 3D canvas */
+.hero{position:relative;min-height:520px;overflow:hidden;border-bottom:1px solid var(--line)}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,16,32,.15) 0%,rgba(11,16,32,0) 35%,rgba(11,16,32,.85) 100%);pointer-events:none}
+.hero-in{position:relative;z-index:2;max-width:1120px;margin:0 auto;padding:22px 18px 40px;min-height:520px;display:flex;flex-direction:column;justify-content:space-between}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:-.02em;display:flex;align-items:center;gap:10px}
+.logo i{width:26px;height:26px;border-radius:50%;background:conic-gradient(from 200deg,var(--amber),var(--teal) 55%,var(--sky));position:relative;display:inline-block}
+.logo i::after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--ink)}
+.chain{font-size:13px;color:var(--mute);display:flex;align-items:center;gap:8px}
+.chain b{color:var(--text);font-weight:500}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 4px var(--teal-soft)}
+.hero h1{font-family:var(--display);font-size:clamp(34px,6vw,64px);line-height:.98;letter-spacing:-.04em;font-weight:600;max-width:12ch;text-shadow:0 2px 30px rgba(11,16,32,.8)}
+.hero p{color:#C4CCE0;margin:14px 0 22px;max-width:52ch;font-size:15.5px;line-height:1.55;text-shadow:0 1px 20px rgba(11,16,32,.9)}
+.search{display:flex;gap:8px;background:rgba(18,26,48,.85);backdrop-filter:blur(14px);border:1px solid var(--line-2);border-radius:18px;padding:8px;align-items:center;max-width:640px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.search input{flex:1;min-width:0;background:transparent;border:0;color:var(--text);font:inherit;font-size:15px;padding:10px 12px;outline:none}
+.search input::placeholder{color:#6B769A}
+.search button{background:var(--amber);color:#1A1200;font-weight:600;padding:12px 18px;border-radius:12px;white-space:nowrap}
+.demo{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center}
+.demo button{font-size:13px;color:#C4CCE0;border:1px solid var(--line-2);background:rgba(18,26,48,.7);padding:7px 12px;border-radius:999px;backdrop-filter:blur(8px)}
+.demo button[aria-pressed=true]{color:var(--text);border-color:var(--amber);background:var(--amber-soft)}
+.demo-note{font-size:12.5px;color:var(--mute);margin-top:10px}
+
+.wrap{max-width:1120px;margin:0 auto;padding:18px 18px 80px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(12,1fr)}
+.card{background:linear-gradient(180deg,#141D35,#111931);border:1px solid var(--line);border-radius:var(--r);padding:18px;grid-column:span 12;min-width:0;position:relative;box-shadow:0 1px 0 rgba(255,255,255,.03) inset,0 12px 40px rgba(0,0,0,.25)}
+.card h2{font-family:var(--display);font-size:19px;font-weight:600;letter-spacing:-.02em;margin-bottom:4px}
+.card .sub{font-size:13px;color:var(--mute);margin-bottom:12px;line-height:1.5}
+@media(min-width:760px){.span-8{grid-column:span 8}.span-4{grid-column:span 4}.span-6{grid-column:span 6}.span-7{grid-column:span 7}.span-5{grid-column:span 5}}
+
+/* source strip */
+.source{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:var(--ink-2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:14px}
+.source .badge{font-family:var(--display);font-weight:600;font-size:15px;padding:6px 12px;border-radius:10px;background:var(--sky-soft);color:var(--sky);border:1px solid rgba(130,180,255,.35)}
+.source .badge.curve{background:var(--amber-soft);color:var(--amber);border-color:rgba(245,182,58,.35)}
+.source .badge.direct{background:var(--coral-soft);color:var(--coral);border-color:rgba(255,110,110,.35)}
+.source .note{font-size:13px;color:var(--mute);line-height:1.5;flex:1;min-width:220px}
+.source .note b{color:var(--text);font-weight:500}
+
+/* verdict */
+.verdict{display:flex;flex-direction:column;gap:14px}
+.verdict .state{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.verdict .big{font-family:var(--display);font-size:46px;font-weight:700;letter-spacing:-.04em;line-height:1}
+.pill{font-size:12.5px;padding:4px 10px;border-radius:999px;font-weight:500}
+.pill.hi{background:var(--coral-soft);color:var(--coral)}.pill.md{background:var(--amber-soft);color:var(--amber)}.pill.lo{background:var(--teal-soft);color:var(--teal)}
+.zone{border:1px solid rgba(245,182,58,.5);background:linear-gradient(180deg,rgba(245,182,58,.18),rgba(245,182,58,.06));border-radius:12px;padding:14px;box-shadow:0 0 40px rgba(245,182,58,.08)}
+.zone .range{font-family:var(--display);font-size:26px;font-weight:600;letter-spacing:-.03em;color:var(--amber)}
+.zone .why{font-size:13.5px;line-height:1.55;margin-top:6px}
+.why ul{padding-left:18px;margin-top:6px}.why li{margin:3px 0;color:#C9D0E0}
+.invalid{font-size:13px;color:var(--mute);border-top:1px dashed var(--line);padding-top:10px;line-height:1.5}
+.invalid b{color:var(--coral);font-weight:500}
+
+/* chart */
+.chart-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:8px}
+.chart-head .mc{font-family:var(--display);font-size:30px;font-weight:600;letter-spacing:-.03em}
+.chart-head .delta{font-size:13px;color:var(--mute);text-align:right}
+.chart-head .delta b{color:var(--teal);font-weight:500}
+svg.chart{width:100%;height:auto;display:block;overflow:visible}
+.phases{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.phase{font-size:12px;padding:5px 9px;border-radius:8px;border:1px solid var(--line);color:var(--mute);display:flex;gap:6px;align-items:center}
+.phase i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.legend{font-size:12px;color:var(--mute);margin-top:10px;display:flex;gap:14px;flex-wrap:wrap}
+.legend span{display:flex;gap:6px;align-items:center}.legend em{width:16px;height:2px;display:inline-block}
+
+/* curve gauge */
+.curve{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
+.curve svg{width:120px;height:120px}
+.curve .n{font-family:var(--display);font-size:34px;font-weight:700;letter-spacing:-.04em;line-height:1}
+.curve .d{font-size:13px;color:var(--mute);line-height:1.5;margin-top:4px}
+.kv{display:grid;grid-template-columns:1fr auto;gap:8px 12px;font-size:13.5px;margin-top:12px}
+.kv span:nth-child(even){font-family:var(--display);font-weight:600;text-align:right}
+
+/* meters */
+.meter{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center;margin:9px 0}
+.meter .lbl{font-size:13.5px}.meter .val{font-family:var(--display);font-weight:600;font-size:16px;text-align:right}
+.bar{grid-column:1/-1;height:7px;border-radius:4px;background:var(--ink-3);overflow:hidden;position:relative}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.hint{font-size:12.5px;color:var(--mute);line-height:1.5;margin-top:10px}
+
+/* holders */
+.holders{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:520px){.holders{grid-template-columns:1.1fr 1fr}}
+svg.map{width:100%;height:auto;display:block}
+.hlist{font-size:13px}
+.hrow{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.hrow:last-child{border-bottom:0}
+.hrow .tag{font-size:11.5px;padding:2px 7px;border-radius:6px;background:var(--ink-3);color:var(--mute)}
+.hrow .tag.ins{background:var(--coral-soft);color:var(--coral)}.hrow .tag.lp{background:var(--teal-soft);color:var(--teal)}.hrow .tag.snipe{background:var(--amber-soft);color:var(--amber)}
+
+/* timeline */
+.tl{position:relative;padding-left:20px;margin-top:6px}
+.tl::before{content:"";position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.ev{position:relative;padding:6px 0 12px}
+.ev::before{content:"";position:absolute;left:-18px;top:11px;width:10px;height:10px;border-radius:50%;background:var(--ink-2);border:2px solid var(--mute)}
+.ev.hot::before{border-color:var(--coral);background:var(--coral)}
+.ev.good::before{border-color:var(--teal);background:var(--teal)}
+.ev .t{font-size:12.5px;color:var(--mute)}.ev .w{font-size:14px;margin-top:2px}.ev .w b{font-weight:600;color:var(--coral)}
+
+/* survival */
+.surv{display:flex;align-items:center;gap:18px}
+.ring{width:110px;height:110px;flex:none}
+.surv .n{font-family:var(--display);font-size:38px;font-weight:700;letter-spacing:-.04em;line-height:1}
+.surv .d{font-size:13px;color:var(--mute);line-height:1.5;margin-top:4px}
+.factors{margin-top:12px;display:grid;gap:6px}
+.factor{display:flex;justify-content:space-between;font-size:13px;padding:7px 10px;border-radius:8px;background:var(--ink-3)}
+.factor b{font-weight:500}.factor.bad b{color:var(--coral)}.factor.good b{color:var(--teal)}
+
+.clone{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.clone:last-child{border:0}.clone .addr{color:var(--mute);font-size:12px}.clone .pill{flex:none}
+
+.regret{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.rbox{background:var(--ink-3);border-radius:12px;padding:14px}
+.rbox .l{font-size:12.5px;color:var(--mute)}.rbox .v{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:-.03em;margin-top:4px}
+.rbox.now .v{color:var(--coral)}.rbox.zone .v{color:var(--amber)}.rbox .s{font-size:12.5px;color:var(--mute);margin-top:4px}
+.rin{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:13px;color:var(--mute)}
+.rin input{width:110px;background:var(--ink-3);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:8px 10px;font:inherit}
+
+.alert{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.alert button{background:var(--ink-3);border:1px solid var(--line);padding:10px 14px;border-radius:10px;font-size:13.5px}
+.alert button.on{border-color:var(--amber);background:var(--amber-soft);color:var(--amber)}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--text);color:var(--ink);padding:10px 16px;border-radius:10px;font-size:13.5px;transition:.25s;pointer-events:none;font-weight:500;z-index:9}
+.toast.show{opacity:1;transform:translateX(-50%)}
+footer{margin-top:40px;font-size:12.5px;color:var(--mute);line-height:1.6;max-width:70ch}
+@media(max-width:600px){.chain span:last-child{display:none}.hero-in{gap:28px;justify-content:flex-start;padding-top:18px}.chart-head .mc{font-size:24px}.regret{grid-template-columns:1fr}.verdict .big{font-size:40px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<section class="hero">
+  <canvas id="scene"></canvas>
+  <div class="hero-in">
+    <header>
+      <div class="logo"><i></i>Lowtide</div>
+      <div class="chain"><span class="dot"></span><b>Robinhood Chain</b><span> · chain 4663</span></div>
+    </header>
+    <div>
+      <h1>Buy the correction, not the top.</h1>
+      <p>Paste any token on Robinhood Chain. Lowtide detects how it launched, reads the curve or the pool and the wallets together, then shows where the lower-risk entry sits — and what would invalidate it.</p>
+      <form class="search" onsubmit="return false">
+        <input id="addr" placeholder="0x… token contract address" autocomplete="off" spellcheck="false">
+        <button id="go">Analyze token</button>
+      </form>
+      <div class="demo" id="demo"></div>
+      <div class="demo-note">Demo mode: sample tokens use simulated on-chain data with the real scoring logic. Live mode reads the launchpad contracts, swaps and holders from the Robinhood Chain explorer.</div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+<div class="source" id="source"></div>
+<div class="grid">
+  <div class="card span-8">
+    <div class="chart-head">
+      <div><div class="sub" style="margin:0" id="tkname">—</div><div class="mc" id="mc">—</div></div>
+      <div class="delta" id="delta"></div>
+    </div>
+    <svg class="chart" id="chart" viewBox="0 0 700 300" role="img" aria-label="Price and volume with entry zone"></svg>
+    <div class="phases" id="phases"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div class="card span-4 verdict" id="verdict"></div>
+  <div class="card span-6" id="stagecard"></div>
+  <div class="card span-6" id="flowcard"><h2>Crowd vs. insiders</h2><div class="sub">Who is buying right now. New wallets arriving means absorption; early wallets handing off to late ones means distribution.</div><div id="meters"></div></div>
+  <div class="card span-7"><h2>Holder map</h2><div class="sub">Top wallets and their funding links. Wallets fed by the same source are drawn as one cluster; first-block buyers are marked as snipers.</div><div class="holders"><svg class="map" id="map" viewBox="0 0 320 260"></svg><div class="hlist" id="hlist"></div></div></div>
+  <div class="card span-5"><h2>48-hour survival</h2><div class="sub">Estimated from tokens on this chain with the same launch type that already lived or died.</div><div class="surv"><svg class="ring" id="ring" viewBox="0 0 110 110"></svg><div><div class="n" id="survn">—</div><div class="d">chance this token still has active trading and intact liquidity in 48 hours</div></div></div><div class="factors" id="factors"></div></div>
+  <div class="card span-6"><h2 id="tltitle">Sell-pressure countdown</h2><div class="sub" id="tlsub"></div><div class="tl" id="tl"></div></div>
+  <div class="card span-6"><h2>Clone radar</h2><div class="sub">Other tokens using this name or symbol, and whether the contract code matches a known honeypot.</div><div id="clones"></div></div>
+  <div class="card span-6"><h2>Regret simulator</h2><div class="sub">What the same amount does if you enter now versus inside the zone, assuming the modeled path.</div><div class="rin">Amount <input id="amt" type="number" value="500" min="1"> USD</div><div class="regret" id="regret"></div></div>
+  <div class="card span-6"><h2>Watch this token</h2><div class="sub">Get pinged when price enters the zone, when graduation is close, when a vesting tranche unlocks, or when insider wallets move.</div><div class="alert" id="alerts"></div></div>
+</div>
+<footer>Lowtide shows risk-adjusted price zones with the reasoning behind them. It does not tell you to buy or sell any token, and zones can fail — check the invalidation conditions before acting. Launchpad mechanics (curve shape, graduation threshold, vesting) are read from each platform's contracts and can change with upgrades. Data on demo tokens is simulated.</footer>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+/* ================= 3D hero: the tide surface =================
+   A liquidity/price surface. Height = price path over time (x) and
+   pool depth (z). The amber band is the lower-risk zone.           */
+(function(){
+  const canvas=document.getElementById('scene');
+  if(!window.THREE) return;
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.Fog(0x0B1020,18,46);
+  const camera=new THREE.PerspectiveCamera(42,1,.1,100);
+  camera.position.set(0,7.5,17);
+  const W=120,D=48,SX=34,SZ=14;
+  const geo=new THREE.PlaneGeometry(SX,SZ,W,D); geo.rotateX(-Math.PI/2);
+  const pos=geo.attributes.position, n=pos.count;
+  const colors=new Float32Array(n*3); geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+  const amber=new THREE.Color(0xF5B63A),teal=new THREE.Color(0x41D6B8),coral=new THREE.Color(0xFF6E6E),sky=new THREE.Color(0x3A5A9A),dim=new THREE.Color(0x1E2B4C);
+  // price path: quiet → pump → correction (matches the analysis story)
+  function price(u){ // u 0..1
+    if(u<.3) return .15+.05*Math.sin(u*40);
+    if(u<.6){const t=(u-.3)/.3; return .2+2.6*Math.pow(t,1.7);}
+    const t=(u-.6)/.4; return 2.8-1.1*Math.pow(t,.75);
+  }
+  const wire=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({vertexColors:true,wireframe:true,transparent:true,opacity:.55}));
+  const fill=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x0B1020,transparent:true,opacity:.55,polygonOffset:true,polygonOffsetFactor:1}));
+  scene.add(fill,wire);
+  // zone band: a translucent slab at the zone height
+  const zoneY=price(1)*.82;
+  const band=new THREE.Mesh(new THREE.BoxGeometry(SX+2,.05,SZ+2),new THREE.MeshBasicMaterial({color:0xF5B63A,transparent:true,opacity:.28}));
+  band.position.y=zoneY; scene.add(band);
+  const rim=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(SX+2,.9,SZ+2)),new THREE.LineBasicMaterial({color:0xF5B63A,transparent:true,opacity:.5}));
+  rim.position.y=zoneY; scene.add(rim);
+  // particles: buys and sells drifting
+  const pc=260,pg=new THREE.BufferGeometry(),pp=new Float32Array(pc*3),pcol=new Float32Array(pc*3);
+  for(let i=0;i<pc;i++){pp[i*3]=(Math.random()-.5)*SX;pp[i*3+1]=Math.random()*4;pp[i*3+2]=(Math.random()-.5)*SZ;const c=Math.random()>.7?coral:teal;pcol[i*3]=c.r;pcol[i*3+1]=c.g;pcol[i*3+2]=c.b;}
+  pg.setAttribute('position',new THREE.BufferAttribute(pp,3));pg.setAttribute('color',new THREE.BufferAttribute(pcol,3));
+  scene.add(new THREE.Points(pg,new THREE.PointsMaterial({size:.09,vertexColors:true,transparent:true,opacity:.8})));
+  let t=0;
+  function update(){
+    for(let i=0;i<n;i++){
+      const x=pos.getX(i),z=pos.getZ(i),u=(x+SX/2)/SX,v=(z+SZ/2)/SZ;
+      const depth=1-Math.abs(v-.5)*1.6; // deeper liquidity in the middle
+      const y=price(u)*(.55+.45*depth)+.12*Math.sin(u*22+t*1.2+v*6)+.06*Math.cos(v*14-t);
+      pos.setY(i,y);
+      const c=new THREE.Color();
+      if(Math.abs(y-zoneY)<.28) c.copy(amber);
+      else if(u>.6&&y>zoneY) c.copy(coral).lerp(dim,.35);
+      else if(u<.6&&u>.3) c.copy(sky).lerp(teal,Math.min(1,(u-.3)*2.2));
+      else c.copy(dim).lerp(sky,depth*.6);
+      colors[i*3]=c.r;colors[i*3+1]=c.g;colors[i*3+2]=c.b;
+    }
+    pos.needsUpdate=true; geo.attributes.color.needsUpdate=true;
+    for(let i=0;i<pc;i++){pp[i*3+1]+=.01;if(pp[i*3+1]>4.2)pp[i*3+1]=0;}
+    pg.attributes.position.needsUpdate=true;
+  }
+  function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+  addEventListener('resize',resize); resize();
+  let mx=0,my=0; addEventListener('pointermove',e=>{mx=(e.clientX/innerWidth-.5);my=(e.clientY/innerHeight-.5);},{passive:true});
+  function frame(){
+    if(!reduce) t+=.012;
+    update();
+    camera.position.x+=((mx*2.5)-camera.position.x)*.04;
+    camera.position.y+=((7.5-my*1.5)-camera.position.y)*.04;
+    camera.lookAt(0,1.1,0);
+    renderer.render(scene,camera);
+    if(!reduce) requestAnimationFrame(frame);
+  }
+  frame(); if(reduce) renderer.render(scene,camera);
+})();
+
+/* ================= data adapter =================
+   Live mode: implement fetchToken(address) against the Robinhood Chain
+   explorer (token info, holders, Uniswap pool swaps) and the launchpad
+   contracts (Pons V1/V2, hood.fun, Pools.trade). The scoring only needs
+   the object shape returned by makeDemo().
+   source values: "pons_v2_curve" (still on bonding curve),
+                  "pons_v2_grad"  (graduated to locked Uniswap v4),
+                  "pons_v1"       (launched straight into locked v3 LP),
+                  "direct"        (deployed by hand, LP may be unlocked). */
+
+const DEMOS=[
+  {name:"HOOD PEPE",   sym:"HPEPE", seed:11, source:"pons_v2_grad",  pump:6.5, snipers:.31, gradMin:14, hp:false},
+  {name:"Tide Cat",    sym:"TIDE",  seed:5,  source:"pons_v2_curve", curvePct:.68, snipers:.22, hp:false},
+  {name:"Robin Cat",   sym:"RCAT",  seed:3,  source:"pons_v1",       pump:2.3, snipers:.09, hp:false},
+  {name:"DOGWIF HOOD", sym:"WIFH",  seed:7,  source:"direct",        pump:4.0, snipers:.34, lpLocked:false, cliff:6, hp:true},
+];
+const SOURCE_META={
+  pons_v2_curve:{label:"Pons V2 · on bonding curve",cls:"curve",note:"Price is set by the curve, not by traders, so chart levels mean nothing yet. Liquidity migrates to a <b>permanently locked</b> Uniswap v4 pool at graduation. The risk is the first exit wave right after migration."},
+  pons_v2_grad:{label:"Pons V2 · graduated",cls:"",note:"Liquidity sits in a <b>permanently locked</b> Uniswap v4 pool — nobody can pull it. LP risk is off the table; the risks are curve-buyer overhang, snipers and creator buyback vesting."},
+  pons_v1:{label:"Pons V1 · locked Uniswap v3",cls:"",note:"Launched straight into a locked Uniswap v3 pool. No curve phase, so the first minutes are the sniper window; check who bought in the launch block."},
+  direct:{label:"Direct deploy · no launchpad",cls:"direct",note:"Deployed by hand. Nothing is standardized: supply can be mintable, LP can be unlocked, team allocations can be unvested. Every safeguard has to be verified."},
+};
+function rng(seed){return()=>{seed=(seed*16807)%2147483647;return(seed-1)/2147483646}}
+
+function makeDemo(d){
+  const r=rng(d.seed*97+13), N=96, base=50000, isCurve=d.source==="pons_v2_curve";
+  const prices=[],vols=[],buyers=[],sellers=[],insiderSell=[];
+  let ignite,top,grad=-1;
+  if(isCurve){
+    // deterministic curve: price ~ k*(supply sold)^2, plotted against candles as buys arrive
+    ignite=8; top=N-1; const sold=[]; let s=0;
+    for(let i=0;i<N;i++){ s+= i<ignite? .002 : .004+r()*.01*(i>N*.5?1.6:1); sold.push(Math.min(d.curvePct,s)); }
+    const curveP=f=>base*(0.3+5*f*f); for(let i=0;i<N;i++){ const p=curveP(sold[i]); prices.push(p);
+      const v=400+2600*(sold[i]-(sold[i-1]||0))*100+r()*300; vols.push(v);
+      buyers.push(Math.round(v/70+r()*5)); sellers.push(Math.round(v/220+r()*3)); insiderSell.push(0); }
+  } else {
+    const peak=base*d.pump; ignite=Math.floor(N*.18); top=Math.floor(N*.55); grad=d.source==="pons_v2_grad"?ignite:-1;
+    for(let i=0;i<N;i++){
+      let p; const now=N-1;
+      if(i<ignite) p=base*(1+.02*Math.sin(i/3)+(r()-.5)*.03);
+      else if(i<=top){const t=(i-ignite)/(top-ignite); p=base+(peak-base)*Math.pow(t,1.6)*(1+(r()-.5)*.06);}
+      else {const t=(i-top)/(now-top); p=peak*(1-.28*Math.pow(t,.7))*(1+(r()-.5)*.05);}
+      prices.push(p);
+      const v=i<ignite?400+r()*300:i<=top?900+4000*Math.pow((i-ignite)/(top-ignite),1.3)+r()*800:2600*(1-(i-top)/(now-top)*.7)+r()*700; vols.push(v);
+      buyers.push(Math.max(0,Math.round(v/60*(i>top?(1-(i-top)/(now-top)*.6):1)+r()*6)));
+      sellers.push(Math.max(0,Math.round(v/90*(i>top?1.5:.5)+r()*5)));
+      // graduated Pons tokens: exit wave right after migration; others: insider sells at the top
+      const win = grad>=0 ? (i>=grad&&i<grad+d.gradMin/5+2) : (i>top-3&&i<top+8);
+      insiderSell.push(win&&r()>.35?Math.round(300+r()*900):0);
+    }
+  }
+  const holders=[
+    {l:d.source==="direct"?"Uniswap pool":"Uniswap pool (locked)",pct:isCurve?0:(d.source==="direct"?24:31),type:"lp",c:-1},
+    ...(isCurve?[{l:"Bonding curve reserve",pct:Math.round((1-d.curvePct)*70),type:"lp",c:-1}]:[]),
+    {l:"Deployer",pct:d.source==="direct"?7.8:isCurve?2.1:3.4,type:"ins",c:0},
+    {l:"0x4a…c91e",pct:6.1,type:"snipe",c:0},{l:"0x92…7bd0",pct:5.4,type:"snipe",c:0},
+    {l:"0xe1…03aa",pct:4.9,type:"ins",c:1},{l:"0x77…5f21",pct:4.2,type:"snipe",c:1},
+    {l:"0x3c…be44",pct:2.6,type:"",c:-1},{l:"0xa8…10ef",pct:2.1,type:"",c:-1},{l:"0x0f…9c7a",pct:1.9,type:"",c:-1},
+  ];
+  let unlocks;
+  if(d.source==="direct") unlocks=[
+    {h:0,pct:0,label:d.lpLocked?"LP locked for 180 days":"LP is not locked — can be pulled any time",hot:!d.lpLocked,good:d.lpLocked},
+    {h:d.cliff,pct:9,label:"Team cliff ends",hot:true},{h:18,pct:4,label:"Advisor tranche vests"},{h:48,pct:6,label:"Marketing wallet unlocks"}];
+  else if(isCurve) unlocks=[
+    {h:0,pct:0,label:"Curve at "+Math.round(d.curvePct*100)+"% — graduation moves liquidity to a locked Uniswap v4 pool",good:true},
+    {h:1,pct:Math.round(d.snipers*100*.7),label:"Expected first exit wave after graduation (curve snipers)",hot:true},
+    {h:24,pct:2,label:"Creator buyback tranche vests"},{h:72,pct:2,label:"Creator buyback tranche vests"}];
+  else unlocks=[
+    {h:0,pct:0,label:"Liquidity permanently locked at "+(d.source==="pons_v1"?"launch":"graduation"),good:true},
+    {h:12,pct:2,label:"Creator buyback tranche vests"},{h:36,pct:2,label:"Creator buyback tranche vests"}];
+  return {...d,prices,vols,buyers,sellers,insiderSell,ignite,top,grad,isCurve,gradMc:isCurve?base*5.3:0,poolDepth:isCurve?0:38000+d.seed*1500,holders,unlocks,
+    lpLocked:d.source==="direct"?d.lpLocked:true,
+    clones:[
+      {name:d.name,sym:d.sym,age:"this token",liq:"—",match:d.hp?"matches known honeypot":"original",lvl:d.hp?"hi":"lo"},
+      {name:d.name.toUpperCase(),sym:d.sym,age:"12 min",liq:"$1.4k",match:"copycat · same deployer, 2 clones",lvl:"hi"},
+      {name:d.name+" 2.0",sym:d.sym+"2",age:"41 min",liq:"$0.6k",match:"code identical to a dead token",lvl:"hi"},
+      {name:d.sym+" (Base)",sym:d.sym,age:"3 days",liq:"$9k",match:"different chain",lvl:"md"}]};
+}
+
+/* ================= scoring ================= */
+function analyze(t){
+  const {prices,vols,buyers,sellers,insiderSell,ignite}=t,N=prices.length,now=prices[N-1],peak=Math.max(...prices),base=prices[ignite];
+  let pv=0,vv=0;for(let i=ignite;i<N;i++){pv+=prices[i]*vols[i];vv+=vols[i];} const vwap=pv/vv;
+  const w=12,nb=buyers.slice(-w).reduce((a,b)=>a+b,0),ns=sellers.slice(-w).reduce((a,b)=>a+b,0),holderGrowth=(nb-ns)/Math.max(1,nb+ns);
+  const insSold=insiderSell.reduce((a,b)=>a+b,0),insiderUnsold=1-insSold/(insSold+5200);
+  let zone,aboveVwap=now/vwap,gradMc=0;
+  if(t.isCurve){
+    // graduation market cap from the curve formula; zone = typical post-migration retrace of 25–40% from graduation cap
+    gradMc=t.gradMc;
+    zone=[gradMc*.62,gradMc*.76]; aboveVwap=1;
+  } else {
+    const fib38=peak-(peak-base)*.382,fib62=peak-(peak-base)*.618;
+    const a=Math.max(vwap,fib38),b=Math.min(vwap,fib62); zone=[Math.min(a,b),Math.max(a,b)];
+  }
+  const unlock72=t.unlocks.filter(u=>u.h<=72).reduce((a,u)=>a+u.pct,0);
+  let risk=18;
+  if(t.isCurve){ risk+=t.curvePct*30; risk+=t.snipers*40; }
+  else { risk+=Math.min(30,(aboveVwap-1)*40); risk+=insiderUnsold*18; risk+=t.snipers*15; }
+  risk+=t.lpLocked?0:18; risk+=holderGrowth<0?10:-5; risk+=t.hp?20:0;
+  risk=Math.round(Math.max(3,Math.min(97,risk)));
+  let surv=.7; surv-=t.lpLocked?0:.22; surv-=t.snipers>.25?.15:.04; surv+=holderGrowth>0?.08:-.08; surv-=t.hp?.35:0; surv+=t.isCurve?-.05:0;
+  surv=Math.round(Math.max(.04,Math.min(.96,surv))*100);
+  return {now,peak,base,vwap,zone,holderGrowth,insiderUnsold,aboveVwap,unlock72,risk,surv,gradMc};
+}
+
+/* ================= helpers ================= */
+const $=s=>document.querySelector(s);
+const k=n=>n>=1e6?(n/1e6).toFixed(2)+"M":n>=1000?(n/1000).toFixed(n>=100000?0:1)+"k":Math.round(n);
+const pct=n=>Math.round(n*100)+"%";
+const lvl=r=>r>=60?["hi","high risk right now"]:r>=35?["md","moderate risk"]:["lo","lower risk"];
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
+let current;
+
+/* ================= render ================= */
+function render(t){
+  current=t; const a=analyze(t), {prices,vols,insiderSell,ignite,top,grad}=t, N=prices.length, sm=SOURCE_META[t.source];
+  $("#source").innerHTML=`<span class="badge ${sm.cls}">${sm.label}</span><div class="note">${sm.note}</div>`;
+  $("#tkname").textContent=`${t.name} · $${t.sym}`;
+  $("#mc").textContent="$"+k(a.now)+(t.isCurve?" curve market cap":" market cap");
+  $("#delta").innerHTML=t.isCurve?`graduates at ≈$${k(a.gradMc)} · <b>${Math.round(t.curvePct*100)}%</b> of curve sold`:`peak $${k(a.peak)} · <b>${(a.now/a.base).toFixed(1)}×</b> from ${grad>=0?"graduation":"launch"}`;
+
+  /* chart */
+  const W=700,H=300,padL=8,padR=52,padT=14,padB=54,cw=W-padL-padR,ch=H-padT-padB;
+  const minP=Math.min(...prices)*.92,maxP=Math.max(Math.max(...prices),t.isCurve?a.gradMc:0)*1.05;
+  const x=i=>padL+i/(N-1)*cw,y=p=>padT+(1-(p-minP)/(maxP-minP))*ch,maxV=Math.max(...vols);
+  let s="";
+  if(t.isCurve){
+    s+=`<rect x="${padL}" y="${padT}" width="${cw}" height="${ch}" fill="rgba(245,182,58,.05)"/>`;
+    s+=`<line x1="${padL}" x2="${padL+cw}" y1="${y(a.gradMc)}" y2="${y(a.gradMc)}" stroke="var(--teal)" stroke-dasharray="5 4"/>`;
+    s+=`<text x="${padL+cw+4}" y="${y(a.gradMc)+4}" font-size="11" fill="var(--teal)">grad.</text>`;
+  } else {
+    [[ignite,top,"rgba(130,180,255,.06)"],[top,N-1,"rgba(255,110,110,.06)"]].forEach(([p,q,c])=>{s+=`<rect x="${x(p)}" y="${padT}" width="${x(q)-x(p)}" height="${ch}" fill="${c}"/>`});
+    if(grad>=0){s+=`<line x1="${x(grad)}" x2="${x(grad)}" y1="${padT}" y2="${padT+ch}" stroke="var(--teal)" stroke-dasharray="4 4"/><text x="${x(grad)+4}" y="${padT+12}" font-size="11" fill="var(--teal)">graduated</text>`;}
+  }
+  vols.forEach((v,i)=>{const h=v/maxV*40;s+=`<rect x="${x(i)-2.5}" y="${H-padB+50-h}" width="5" height="${h}" fill="rgba(143,154,182,.35)" rx="1"/>`});
+  s+=`<rect x="${padL}" y="${y(a.zone[1])}" width="${cw}" height="${y(a.zone[0])-y(a.zone[1])}" fill="var(--amber)" opacity=".16"/>`;
+  [1,0].forEach(z=>{s+=`<line x1="${padL}" x2="${padL+cw}" y1="${y(a.zone[z])}" y2="${y(a.zone[z])}" stroke="var(--amber)" stroke-dasharray="4 4" opacity=".7"/><text x="${padL+cw+4}" y="${y(a.zone[z])+4}" font-size="11" fill="var(--amber)">$${k(a.zone[z])}</text>`});
+  if(!t.isCurve){s+=`<line x1="${x(ignite)}" x2="${padL+cw}" y1="${y(a.vwap)}" y2="${y(a.vwap)}" stroke="var(--sky)" stroke-width="1.5" opacity=".8"/><text x="${padL+cw+4}" y="${y(a.vwap)+4}" font-size="11" fill="var(--sky)">VWAP</text>`;}
+  let d=`M${x(0)},${y(prices[0])}`;prices.forEach((p,i)=>{if(i)d+=` L${x(i)},${y(p)}`});
+  s+=`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAEEF8" stop-opacity=".18"/><stop offset="1" stop-color="#EAEEF8" stop-opacity="0"/></linearGradient></defs>`;
+  s+=`<path d="${d} L${x(N-1)},${padT+ch} L${x(0)},${padT+ch} Z" fill="url(#g)"/><path d="${d}" fill="none" stroke="var(--text)" stroke-width="2" stroke-linejoin="round"/>`;
+  insiderSell.forEach((v,i)=>{if(v)s+=`<circle cx="${x(i)}" cy="${y(prices[i])}" r="${3+v/400}" fill="var(--coral)" opacity=".85"/>`});
+  if(!t.isCurve){const pi=prices.indexOf(a.peak);s+=`<text x="${x(pi)}" y="${y(a.peak)-8}" font-size="11" fill="var(--mute)" text-anchor="middle">top $${k(a.peak)}</text>`;}
+  s+=`<circle cx="${x(N-1)}" cy="${y(a.now)}" r="4.5" fill="var(--ink)" stroke="var(--text)" stroke-width="2"/><text x="${x(N-1)}" y="${y(a.now)-10}" font-size="11" fill="var(--text)" text-anchor="middle">now</text>`;
+  [0,.25,.5,.75,1].forEach(f=>{const i=Math.round(f*(N-1));s+=`<text x="${x(i)}" y="${H-2}" font-size="10.5" fill="var(--mute)" text-anchor="middle">${(8-(N-1-i)*5/60).toFixed(0)}h ago</text>`});
+  $("#chart").innerHTML=s;
+  $("#phases").innerHTML=t.isCurve?`<div class="phase"><i style="background:var(--amber)"></i>Curve price is formula-driven — no support or resistance yet</div><div class="phase"><i style="background:var(--teal)"></i>Graduation ≈$${k(a.gradMc)}, then locked v4 pool</div>`
+   :`<div class="phase"><i style="background:rgba(130,180,255,.9)"></i>${grad>=0?"Migration":"Ignition"} · ${(a.peak/a.base).toFixed(1)}× in ${((top-ignite)*5/60).toFixed(1)}h</div><div class="phase"><i style="background:var(--coral)"></i>${grad>=0?"Curve-buyer exit wave after graduation":"Insider sells clustered at the top"}</div><div class="phase"><i style="background:var(--amber)"></i>Correction ${pct(1-a.now/a.peak)} so far</div>`;
+  $("#legend").innerHTML=`<span><em style="background:var(--text)"></em>Price</span>${t.isCurve?'<span><em style="background:var(--teal)"></em>Graduation cap</span>':'<span><em style="background:var(--sky)"></em>Average buyer cost (VWAP)</span>'}<span><em style="background:var(--amber);height:8px;opacity:.5"></em>Lower-risk zone</span><span><em style="background:var(--coral)"></em>${grad>=0?"Curve-buyer sells":"Insider sells"}</span>`;
+
+  /* verdict */
+  const [cls,lbl]=lvl(a.risk);
+  const why=t.isCurve?`Curve is <b>${Math.round(t.curvePct*100)}%</b> sold, first-block snipers hold <b>${pct(t.snipers)}</b> of bought supply, and they typically sell into the fresh pool within the first ${t.snipers>.25?"5–15":"15–30"} minutes after graduation.`
+    :`Price is <b>${a.aboveVwap.toFixed(2)}×</b> the average buyer's cost, ${grad>=0?"curve buyers":"insiders"} still hold <b>${pct(a.insiderUnsold)}</b> of their bags, and liquidity is <b>${t.lpLocked?"locked":"not locked"}</b>.`;
+  const from=t.isCurve?`<li>Graduation cap ≈$${k(a.gradMc)} from the curve formula</li><li>Tokens on this chain that graduated with a similar sniper share retraced 25–40% in the first hour</li><li>Enter after the exit wave slows, not on the curve, unless you plan to sell into graduation yourself</li>`
+    :`<li>Average buyer cost sits at $${k(a.vwap)} — selling tends to exhaust there</li><li>38–62% retracement of the pump lands at $${k(a.zone[0])}–$${k(a.zone[1])}</li><li>Wait for new-holder growth to turn positive before entering</li>`;
+  const inv=t.isCurve?`<b>graduation stalls above 90%</b> for hours (dev drip-selling on the curve), a clone graduates first with the same ticker, or the deployer wallet is buying its own curve.`
+    :`<b>${t.lpLocked?"insider wallets exit more than 30% of holdings":"LP shrinks by more than 20%"}</b>, new-holder growth stays negative for an hour, or a clone with more liquidity takes the ticker.`;
+  $("#verdict").innerHTML=`<div><h2>Entry verdict</h2><div class="sub">Risk right now, and where the lower-risk zone sits.</div></div>
+    <div class="state"><div class="big">${a.risk}<span style="font-size:18px;color:var(--mute)">/100</span></div><span class="pill ${cls}">${lbl}</span></div>
+    <div class="why" style="font-size:13.5px;line-height:1.55">${why}</div>
+    <div class="zone"><div class="range">$${k(a.zone[0])} – $${k(a.zone[1])}</div><div class="why">${t.isCurve?"Post-graduation zone. ":""}Where this comes from:<ul>${from}</ul></div></div>
+    <div class="invalid">Ignore the zone if: ${inv}</div>`;
+
+  /* stage card: curve gauge or migration replay */
+  if(t.isCurve){
+    const C=2*Math.PI*50,p=t.curvePct;
+    $("#stagecard").innerHTML=`<h2>Curve stage</h2><div class="sub">How far the bonding curve has sold and what graduation will look like.</div>
+      <div class="curve"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--ink-3)" stroke-width="10"/><circle cx="60" cy="60" r="50" fill="none" stroke="var(--amber)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C*p} ${C}" transform="rotate(-90 60 60)"/></svg>
+      <div><div class="n">${Math.round(p*100)}%</div><div class="d">of the curve sold. At the current buy rate graduation is roughly ${Math.round((1-p)*95)} minutes away.</div></div></div>
+      <div class="kv"><span>Raised so far</span><span>${(p*4.2).toFixed(2)} ETH</span><span>Graduation cap (locked v4 pool)</span><span>$${k(a.gradMc)}</span><span>Deployer buys on own curve</span><span>${t.seed%2?"none":"0.4 ETH"}</span><span>First-block sniper share</span><span>${pct(t.snipers)}</span><span>Average curve-buyer cost</span><span>$${k(a.vwap)} cap</span></div>`;
+  } else {
+    const dump=Math.round(t.snipers*100*.7), wave=grad>=0?"first "+t.gradMin+" minutes after graduation":"the top";
+    $("#stagecard").innerHTML=`<h2>${grad>=0?"Migration replay":"Launch replay"}</h2><div class="sub">${grad>=0?"What early curve buyers did once liquidity moved to the pool.":"What the launch-block buyers did with their position."}</div>
+      <div class="kv"><span>Early buyers' share of supply</span><span>${pct(t.snipers)}</span><span>Sold during ${wave}</span><span>${dump}% of it</span><span>Their average cost</span><span>$${k(a.base*1.15)} cap</span><span>Current price vs their cost</span><span>${(a.now/(a.base*1.15)).toFixed(1)}×</span><span>Still unsold</span><span>${pct(a.insiderUnsold)}</span></div>
+      <div class="hint">${a.insiderUnsold>.5?"More than half of the early supply is still sitting above a large profit — the overhang has not cleared.":"Most early supply has already been sold; remaining downside is mostly organic."}</div>`;
+  }
+
+  /* meters */
+  const hg=a.holderGrowth,top10=t.holders.filter(h=>h.type!=="lp").reduce((s,h)=>s+h.pct,0);
+  $("#meters").innerHTML=`<div class="meter"><span class="lbl">New wallets vs. sellers (last hour)</span><span class="val" style="color:${hg>0?'var(--teal)':'var(--coral)'}">${hg>0?'+':''}${Math.round(hg*100)}</span><div class="bar"><i style="width:${Math.abs(hg)*100}%;background:${hg>0?'var(--teal)':'var(--coral)'}"></i></div></div>
+    <div class="meter"><span class="lbl">${t.isCurve?"Sniper":"Early-buyer"} bags still unsold</span><span class="val" style="color:var(--coral)">${pct(t.isCurve?1:a.insiderUnsold)}</span><div class="bar"><i style="width:${(t.isCurve?1:a.insiderUnsold)*100}%;background:var(--coral)"></i></div></div>
+    <div class="meter"><span class="lbl">Top 10 wallets hold</span><span class="val">${top10.toFixed(0)}%</span><div class="bar"><i style="width:${top10}%;background:var(--sky)"></i></div></div>
+    <div class="meter"><span class="lbl">First-block buys</span><span class="val">${pct(t.snipers)}</span><div class="bar"><i style="width:${t.snipers*100}%;background:var(--amber)"></i></div></div>
+    <div class="hint">${hg>0?"Buyers are still outpacing sellers — the move is being absorbed, not fled.":"Sellers outnumber new buyers. Early wallets are handing off to late ones: this is distribution, not a dip."}</div>`;
+
+  /* timeline */
+  $("#tltitle").textContent=t.isCurve?"What happens next":"Sell-pressure countdown";
+  $("#tlsub").textContent=t.isCurve?"Graduation, the expected exit wave, and creator vesting.":"Supply that becomes sellable in the next 72 hours and what that does to price at current pool depth.";
+  $("#tl").innerHTML=t.unlocks.map(u=>{const imp=u.pct&&t.poolDepth?Math.min(90,Math.round(u.pct/100*a.now/t.poolDepth*100*.6)):0;
+    return `<div class="ev ${u.hot?'hot':u.good?'good':''}"><div class="t">${u.h===0?"now":"in "+u.h+"h"}</div><div class="w">${u.label}${u.pct?` — <b>${u.pct}% of supply</b>${imp?` ≈${imp}% drawdown if fully sold`:""}`:""}</div></div>`}).join("");
+
+  /* holder map */
+  let m=`<circle cx="160" cy="130" r="118" fill="none" stroke="var(--line)"/>`;const cols={0:"var(--coral)",1:"var(--amber)"};
+  const hs=t.holders.filter(h=>h.pct>0);
+  hs.forEach((h,i)=>{const ang=-Math.PI/2+i/hs.length*Math.PI*2,r=h.type==="lp"?(i?28:0):h.c>=0?70:105,cx=160+Math.cos(ang)*r,cy=130+Math.sin(ang)*r,rad=6+h.pct*1.2;
+    if(h.c>=0)m+=`<line x1="160" y1="130" x2="${cx}" y2="${cy}" stroke="${cols[h.c]}" stroke-opacity=".35"/>`;
+    m+=`<circle cx="${cx}" cy="${cy}" r="${rad}" fill="${h.type==='lp'?'var(--teal)':h.c>=0?cols[h.c]:'var(--sky)'}" fill-opacity=".85"/><text x="${cx}" y="${cy+3.5}" font-size="9.5" text-anchor="middle" fill="#0B1020" font-weight="600">${h.pct}</text>`;});
+  m+=`<text x="160" y="250" font-size="10.5" text-anchor="middle" fill="var(--mute)">red: deployer-funded · amber: 2nd cluster · blue: independent</text>`;
+  $("#map").innerHTML=m;
+  $("#hlist").innerHTML=hs.map(h=>`<div class="hrow"><span>${h.l}</span><span><span class="tag ${h.type}">${h.type==='lp'?(t.lpLocked?'liquidity · locked':'liquidity · unlocked'):h.type==='ins'?'insider · cluster '+(h.c+1):h.type==='snipe'?'first-block sniper':'independent'}</span> &nbsp;${h.pct}%</span></div>`).join("");
+
+  /* survival */
+  const C=2*Math.PI*46,col=a.surv>=60?"var(--teal)":a.surv>=35?"var(--amber)":"var(--coral)";
+  $("#ring").innerHTML=`<circle cx="55" cy="55" r="46" fill="none" stroke="var(--ink-3)" stroke-width="10"/><circle cx="55" cy="55" r="46" fill="none" stroke="${col}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C*a.surv/100} ${C}" transform="rotate(-90 55 55)"/>`;
+  $("#survn").textContent=a.surv+"%";$("#survn").style.color=col;
+  $("#factors").innerHTML=[[t.lpLocked?"good":"bad","Liquidity",t.lpLocked?(t.source==="direct"?"locked 180d":"permanently locked"):"unlocked"],[t.snipers>.25?"bad":"good","First-block buyers",pct(t.snipers)+" of supply"],[hg>0?"good":"bad","Holder growth",hg>0?"positive":"negative"],[t.hp?"bad":"good","Contract code",t.hp?"matches honeypot":t.source==="direct"?"verified, mintable":"standard launchpad, fixed supply"]].map(([c,l,v])=>`<div class="factor ${c}"><span>${l}</span><b>${v}</b></div>`).join("");
+
+  $("#clones").innerHTML=t.clones.map(c=>`<div class="clone"><div><div>${c.name} · $${c.sym}</div><div class="addr">${c.age} · liquidity ${c.liq}</div></div><span class="pill ${c.lvl}">${c.match}</span></div>`).join("");
+  renderRegret(a);
+  $("#alerts").innerHTML=(t.isCurve?["Graduation within 5%","Price enters zone after graduation","Deployer buys own curve","Sniper wallet moves"]:["Price enters zone","Vesting tranche in 30 min","Early-buyer wallet moves","Holder growth turns positive"]).map(l=>`<button data-a="${l}">${l}</button>`).join("");
+  $("#alerts").querySelectorAll("button").forEach(b=>b.onclick=()=>{b.classList.toggle("on");toast(b.classList.contains("on")?`Alert on: ${b.dataset.a}`:`Alert off: ${b.dataset.a}`)});
+}
+function renderRegret(a){
+  const amt=+$("#amt").value||0,target=a.zone[1],nowP=current.isCurve?a.gradMc:a.now,rebound=1.35;
+  const nowOut=amt*(target/nowP);
+  $("#regret").innerHTML=`<div class="rbox now"><div class="l">${current.isCurve?"Buy into graduation at":"Enter now at"} $${k(nowP)}</div><div class="v">$${Math.round(nowOut*rebound)}</div><div class="s">${Math.round((nowOut*rebound/amt-1)*100)}% if the zone holds and rebounds; ${Math.round((target/nowP-1)*100)}% first</div></div>
+    <div class="rbox zone"><div class="l">Enter in zone at $${k(target)}</div><div class="v">$${Math.round(amt*rebound)}</div><div class="s">+${Math.round((rebound-1)*100)}% on the same rebound, ${Math.round((1-target/nowP)*100)}% less drawdown</div></div>`;
+}
+$("#amt").addEventListener("input",()=>renderRegret(analyze(current)));
+const demoEl=$("#demo");
+DEMOS.forEach((d,i)=>{const b=document.createElement("button");b.textContent=`$${d.sym} · ${SOURCE_META[d.source].label.split(" · ")[0]}`;b.setAttribute("aria-pressed",i===0);b.onclick=()=>{demoEl.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",false));b.setAttribute("aria-pressed",true);render(makeDemo(d));};demoEl.appendChild(b);});
+/* Live lookup: calls the Lowtide API and maps its report onto the render shape. Falls back to demo data if the API is not reachable. */
+async function fetchToken(addr){
+  const r=await fetch("/api/token/"+addr); const j=await r.json(); if(!r.ok) throw new Error(j.error||"lookup failed"); return j;
+}
+function fromReport(j){
+  const a=j.analysis, c=j.candles.length>3?j.candles:null, src=j.launch.source in SOURCE_META?j.launch.source:"direct";
+  const t=makeDemo({name:j.token.name,sym:j.token.symbol,seed:3,source:src,pump:a?a.peak/a.base:2,snipers:j.holders.filter(h=>h.first_block).reduce((s,h)=>s+ +h.pct,0)/100,curvePct:j.launch.curvePct||0,gradMin:10,lpLocked:src!=="direct",cliff:0,hp:false});
+  if(c){t.prices=c.map(x=>x.price);t.vols=c.map(x=>x.vol);t.buyers=c.map(x=>x.buyers);t.sellers=c.map(x=>x.sellers);t.insiderSell=c.map(x=>x.earlySell);t.ignite=a.ignite;t.top=t.prices.indexOf(a.peak);}
+  t.holders=j.holders.slice(0,10).map(h=>({l:h.wallet.slice(0,4)+"…"+h.wallet.slice(-4),pct:+(+h.pct).toFixed(1),type:h.first_block?"snipe":h.cluster===0?"ins":"",c:h.cluster??-1}));
+  t.clones=[{name:j.token.name,sym:j.token.symbol,age:"this token",liq:"—",match:j.launch.verified===false?"contract not verified":"original",lvl:j.launch.verified===false?"md":"lo"},...j.clones.map(x=>({name:x.name,sym:x.sym,age:"",liq:"",match:x.match,lvl:"md"}))];
+  t.live=true; t.note=j.note; return t;
+}
+$("#go").onclick=async()=>{const v=$("#addr").value.trim();if(!/^0x[0-9a-fA-F]{40}$/.test(v)){toast("Enter a full 0x contract address");return;}
+  toast("Looking up on Robinhood Chain…");
+  try{const j=await fetchToken(v); demoEl.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",false)); render(fromReport(j)); if(j.note) toast(j.note);}
+  catch(e){toast(e.message+" — showing demo data");demoEl.querySelectorAll("button")[parseInt(v.slice(2,8),16)%DEMOS.length].click();}};
+render(makeDemo(DEMOS[0]));
+</script>
+</body>
+</html>

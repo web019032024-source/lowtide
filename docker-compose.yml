@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: lowtide, POSTGRES_PASSWORD: lowtide, POSTGRES_DB: lowtide }
+    volumes: [ "pg:/var/lib/postgresql/data" ]
+  api:
+    build: .
+    env_file: .env
+    environment: { DATABASE_URL: postgres://lowtide:lowtide@db:5432/lowtide }
+    ports: [ "8080:8080" ]
+    depends_on: [ db ]
+    command: sh -c "npm run migrate && npm start"
+  indexer:
+    build: .
+    env_file: .env
+    environment: { DATABASE_URL: postgres://lowtide:lowtide@db:5432/lowtide }
+    depends_on: [ db ]
+    command: npm run index
+volumes: { pg: {} }

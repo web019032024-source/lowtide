@@ -1,0 +1,19 @@
+{
+  "name": "lowtide",
+  "version": "0.1.0",
+  "description": "Lower-risk entry analytics for tokens on Robinhood Chain",
+  "type": "module",
+  "main": "src/api/server.js",
+  "scripts": {
+    "start": "node src/api/server.js",
+    "index": "node src/indexer/run.js",
+    "migrate": "node src/indexer/migrate.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.12.0",
+    "dotenv": "^16.4.5"
+  },
+  "engines": { "node": ">=20" }
+}
